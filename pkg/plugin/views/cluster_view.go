@@ -136,6 +136,7 @@ func BuildKindClusterView(request service.Request) (component.Component, error) 
 	return flexLayout, nil
 }
 
+// ContainerDetails contains metadata of a docker container
 type ContainerDetails struct {
 	Version string
 	Created int64

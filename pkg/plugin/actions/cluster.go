@@ -7,7 +7,6 @@ import (
 	"github.com/vmware-tanzu/octant/pkg/action"
 	"github.com/vmware-tanzu/octant/pkg/plugin/service"
 	"k8s.io/client-go/tools/clientcmd"
-	_ "k8s.io/client-go/tools/clientcmd"
 	"os"
 	"sigs.k8s.io/kind/pkg/apis/config/v1alpha4"
 	"sigs.k8s.io/kind/pkg/cluster"
@@ -15,7 +14,9 @@ import (
 )
 
 const (
+	// CreateKindClusterAction is the action name for creating a cluster
 	CreateKindClusterAction = "octant-plugin-for-kind/create"
+	// DeleteKindClusterAction is the action name for deleting a cluster
 	DeleteKindClusterAction = "octant-plugin-for-kind/delete"
 )
 
@@ -174,8 +175,10 @@ type ClusterDetails struct {
 	Version           []string `json:"version"`
 }
 
+// FlexInt is an integer that can also handle string representations
 type FlexInt int
 
+// UnmarshalJSON unmarshals FlexInt
 func (fi *FlexInt) UnmarshalJSON(b []byte) error {
 	if b[0] != '"' {
 		return json.Unmarshal(b, (*int)(fi))

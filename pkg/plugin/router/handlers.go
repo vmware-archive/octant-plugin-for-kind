@@ -6,6 +6,7 @@ import (
 	"github.com/vmware-tanzu/octant/pkg/view/component"
 )
 
+// InitRoutes sets up plugin routes
 func InitRoutes(router *service.Router) {
 	router.HandleFunc("", kindListHandler)
 }

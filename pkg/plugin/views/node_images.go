@@ -45,6 +45,7 @@ func getFeatureGateList() ([]FeatureGate, error) {
 	return featureGates, nil
 }
 
+// FeatureGate contains metadata of a feature gate
 type FeatureGate struct {
 	Feature string  `json:"feature"`
 	Default bool    `json:"default"`
@@ -55,6 +56,8 @@ type FeatureGate struct {
 
 // TODO: Some features are listed multiple times due to differing stages.
 //  Remove once reactive forms are implemented
+
+// Unique returns a list of unique feature gate names
 func Unique(featureGates []FeatureGate) []FeatureGate {
 	keys := make(map[string]bool)
 	var list []FeatureGate

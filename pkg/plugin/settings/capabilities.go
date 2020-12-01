@@ -5,6 +5,7 @@ import (
 	"github.com/vmware-tanzu/octant/pkg/plugin"
 )
 
+// GetCapabilities returns the list of plugin capabilities
 func GetCapabilities() *plugin.Capabilities {
 	return &plugin.Capabilities{
 		ActionNames: []string{actions.CreateKindClusterAction, actions.DeleteKindClusterAction},

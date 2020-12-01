@@ -8,6 +8,7 @@ import (
 	"strings"
 )
 
+// GetOptions returns the plugin options
 func GetOptions() []service.PluginOption {
 	return []service.PluginOption{
 		service.WithActionHandler(actions.ActionHandler),
