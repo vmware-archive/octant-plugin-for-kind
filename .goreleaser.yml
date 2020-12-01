@@ -1,0 +1,47 @@
+release:
+  draft: true
+  prerelease: auto
+project_name: octant-plugin-for-kind
+builds:
+  -
+    main: ./cmd/octant-plugin-for-kind/main.go
+    binary: octant
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - windows
+      - darwin
+      - linux
+    goarch:
+      - amd64
+nfpms:
+  -
+    vendor: "VMware"
+    homepage: "https://github.com/vmware-tanzu/octant-plugin-for-kind"
+    maintainer: Octant Maintainers <project-octant@googlegroups.com>
+    description: "Octant UI for managing local development clusters with kind"
+    license: "Apache 2.0"
+    file_name_template: "{{.ProjectName}}_{{.Version}}_{{.Os}}-{{.Arch}}"
+    replacements:
+      darwin: macOS
+      linux: Linux
+      windows: Windows
+archives:
+  -
+    wrap_in_directory: true
+    format: tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+    name_template: "{{.ProjectName}}_{{.Version}}_{{.Os}}-{{.Arch}}"
+    replacements:
+      darwin: macOS
+      linux: Linux
+      windows: Windows
+      amd64: 64bit
+    files:
+      - README.md
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: SNAPSHOT-{{.Commit}}
