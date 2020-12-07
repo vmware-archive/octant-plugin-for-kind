@@ -4,20 +4,29 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
+	"github.com/vmware-tanzu/octant-plugin-for-kind/pkg/docker"
 	"github.com/vmware-tanzu/octant/pkg/action"
 	"github.com/vmware-tanzu/octant/pkg/plugin/service"
 	"k8s.io/client-go/tools/clientcmd"
 	"os"
+	"path/filepath"
 	"sigs.k8s.io/kind/pkg/apis/config/v1alpha4"
 	"sigs.k8s.io/kind/pkg/cluster"
+	"sigs.k8s.io/kind/pkg/cluster/nodes"
+	"sigs.k8s.io/kind/pkg/cluster/nodeutils"
+	"sigs.k8s.io/kind/pkg/fs"
 	"strconv"
 )
 
 const (
 	// CreateKindClusterAction is the action name for creating a cluster
-	CreateKindClusterAction = "octant-plugin-for-kind/create"
+	CreateKindClusterAction = "octant-plugin-for-kind.dev/create"
 	// DeleteKindClusterAction is the action name for deleting a cluster
-	DeleteKindClusterAction = "octant-plugin-for-kind/delete"
+	DeleteKindClusterAction = "octant-plugin-for-kind.dev/delete"
+	// LoadImageAction is the action name for loading a kind image
+	LoadImageAction = "octant-plugin-for-kind.dev/loadImage"
+	// DeleteImageAction is the action name for deleting a kind image
+	DeleteImageAction = "octant-plugin-for-kind.dev/deleteImage"
 )
 
 // ActionHandler is a handler for actions
@@ -56,6 +65,26 @@ func ActionHandler(request *service.ActionRequest) error {
 		return createCluster(request, formData, provider)
 	case DeleteKindClusterAction:
 		return deleteCluster(request, provider)
+	case LoadImageAction:
+		imageName, err := request.Payload.String("imageName")
+		if err != nil {
+			return err
+		}
+		clusterName, err := request.Payload.String("clusterName")
+		if err != nil {
+			return err
+		}
+		return loadImage(request, provider, clusterName, imageName)
+	case DeleteImageAction:
+		imageID, err := request.Payload.String("imageID")
+		if err != nil {
+			return err
+		}
+		clusterName, err := request.Payload.String("clusterName")
+		if err != nil {
+			return err
+		}
+		return deleteImage(request, clusterName, imageID)
 	default:
 		return fmt.Errorf("unable to find handler for plugin: %s", "kind")
 	}
@@ -125,7 +154,7 @@ func createCluster(request *service.ActionRequest, clusterConfig ClusterConfig, 
 		FeatureGates: featureGates,
 	}
 
-	alert := action.CreateAlert(action.AlertTypeInfo, "Creating cluster: " + clusterName, action.DefaultAlertExpiration)
+	alert := action.CreateAlert(action.AlertTypeInfo, "Creating cluster: "+clusterName, action.DefaultAlertExpiration)
 	request.DashboardClient.SendAlert(request.Context(), request.ClientID, alert)
 
 	// TODO: Show status when creating cluster
@@ -156,7 +185,7 @@ func deleteCluster(request *service.ActionRequest, provider *cluster.Provider) e
 		return err
 	}
 
-	alert := action.CreateAlert(action.AlertTypeInfo, "Deleted kind cluster: " + clusterName, action.DefaultAlertExpiration)
+	alert := action.CreateAlert(action.AlertTypeInfo, "Deleted kind cluster: "+clusterName, action.DefaultAlertExpiration)
 	request.DashboardClient.SendAlert(request.Context(), request.ClientID, alert)
 	return nil
 }
@@ -192,5 +221,66 @@ func (fi *FlexInt) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	*fi = FlexInt(i)
+	return nil
+}
+
+func loadImage(request *service.ActionRequest, provider *cluster.Provider, clusterName, imageName string) error {
+	nodeList, err := provider.ListInternalNodes(clusterName)
+	if err != nil {
+		return err
+	}
+	if len(nodeList) == 0 {
+		return fmt.Errorf("no nodes for cluster %q", clusterName)
+	}
+
+	var selectedNodes []nodes.Node
+	for _, node := range nodeList {
+		id, err := nodeutils.ImageID(node, imageName)
+		if err != nil || imageName != id {
+			selectedNodes = append(selectedNodes, node)
+		}
+	}
+
+	if len(selectedNodes) == 0 {
+		return nil
+	}
+
+	dir, err := fs.TempDir("", "image-tar")
+	if err != nil {
+		return fmt.Errorf("failed to create tempdir: %+v", err)
+	}
+	defer os.RemoveAll(dir)
+	imageTarPath := filepath.Join(dir, "image.tar")
+
+	client := docker.NewDockerClient()
+	if err := client.Save(request.Context(), imageTarPath, imageName); err != nil {
+		return err
+	}
+
+	f, err := os.Open(imageTarPath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	for _, selectedNode := range selectedNodes {
+		nodeutils.LoadImageArchive(selectedNode, f)
+	}
+
+	alert := action.CreateAlert(action.AlertTypeInfo, "Loading image: "+imageName, action.DefaultAlertExpiration)
+	request.DashboardClient.SendAlert(request.Context(), request.ClientID, alert)
+	return nil
+}
+
+func deleteImage(request *service.ActionRequest, clusterName string, imageID string) error {
+	client := docker.NewDockerClient()
+
+	if err := client.DeleteKindImage(request.Context(), clusterName, imageID); err != nil {
+		alert := action.CreateAlert(action.AlertTypeError, "Failed to delete kind image: "+err.Error(), action.DefaultAlertExpiration)
+		request.DashboardClient.SendAlert(request.Context(), request.ClientID, alert)
+		return err
+	}
+	alert := action.CreateAlert(action.AlertTypeInfo, "Deleted kind image: "+imageID, action.DefaultAlertExpiration)
+	request.DashboardClient.SendAlert(request.Context(), request.ClientID, alert)
 	return nil
 }
