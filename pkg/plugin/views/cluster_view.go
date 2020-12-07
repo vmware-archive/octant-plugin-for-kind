@@ -1,19 +1,15 @@
 package views
 
 import (
-	"context"
-	"regexp"
+	"github.com/vmware-tanzu/octant-plugin-for-kind/pkg/docker"
 	"strconv"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/vmware-tanzu/octant-plugin-for-kind/pkg/plugin/actions"
 	"github.com/vmware-tanzu/octant/pkg/action"
 	"github.com/vmware-tanzu/octant/pkg/plugin/service"
 	"github.com/vmware-tanzu/octant/pkg/view/component"
 
-	"github.com/docker/docker/api/types"
-	dockerClient "github.com/docker/docker/client"
 	"sigs.k8s.io/kind/pkg/cluster"
 	"sigs.k8s.io/kind/pkg/cluster/nodeutils"
 )
@@ -21,6 +17,7 @@ import (
 // BuildKindClusterView builds the layout of kind
 func BuildKindClusterView(request service.Request) (component.Component, error) {
 	ctx := request.Context()
+	client := docker.NewDockerClient()
 
 	table := component.NewTableWithRows(
 		"Clusters",
@@ -35,7 +32,7 @@ func BuildKindClusterView(request service.Request) (component.Component, error) 
 	}
 
 	for _, name := range clusterNames {
-		container, err := findDockerContainer(ctx, name)
+		container, err := client.KindControlPlaneContainer(ctx, name)
 		if err != nil {
 			return nil, err
 		}
@@ -51,9 +48,8 @@ func BuildKindClusterView(request service.Request) (component.Component, error) 
 			return nil, err
 		}
 
-
 		tableRow := component.TableRow{
-			"Name":    component.NewText(name),
+			"Name":    component.NewLink(name, name, name),
 			"Status":  component.NewText(container.State),
 			"Nodes":   component.NewText(strconv.Itoa(len(internalNodes))),
 			"Version": component.NewText(container.Version),
@@ -134,44 +130,6 @@ func BuildKindClusterView(request service.Request) (component.Component, error) 
 	})
 
 	return flexLayout, nil
-}
-
-// ContainerDetails contains metadata of a docker container
-type ContainerDetails struct {
-	Version string
-	Created int64
-	State  string
-}
-
-func findDockerContainer(ctx context.Context, clusterName string) (*ContainerDetails, error) {
-	containerDetails := &ContainerDetails{}
-	cli, err := dockerClient.NewClientWithOpts(dockerClient.FromEnv, dockerClient.WithAPIVersionNegotiation())
-	if err != nil {
-		return nil, err
-	}
-	defer cli.Close()
-
-	containers, err := cli.ContainerList(ctx, types.ContainerListOptions{
-		All: true,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-
-	for _, container := range containers {
-		containerDetails.Created = container.Created
-		containerDetails.State = container.State
-
-		for _, name := range container.Names {
-			if "/"+clusterName+"-control-plane" == name {
-				r, _ := regexp.Compile("v\\d+\\.\\d+\\.\\d+")
-				containerDetails.Version = r.FindString(container.Image)
-				return containerDetails, nil
-			}
-		}
-	}
-	return containerDetails, errors.Errorf("cannot find details for cluster: %s", clusterName)
 }
 
 func generateInputChoices(orderedMap *OrderedMap) []component.InputChoice {

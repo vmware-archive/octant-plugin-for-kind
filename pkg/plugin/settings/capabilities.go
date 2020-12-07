@@ -8,7 +8,11 @@ import (
 // GetCapabilities returns the list of plugin capabilities
 func GetCapabilities() *plugin.Capabilities {
 	return &plugin.Capabilities{
-		ActionNames: []string{actions.CreateKindClusterAction, actions.DeleteKindClusterAction},
-		IsModule:    true,
+		ActionNames: []string{
+			actions.CreateKindClusterAction,
+			actions.DeleteKindClusterAction,
+			actions.LoadImageAction,
+			actions.DeleteImageAction},
+		IsModule: true,
 	}
 }
