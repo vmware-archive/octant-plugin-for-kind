@@ -1,6 +1,6 @@
 # Octant Plugin for kind
 
-![CI](https://github.com/vmware-tanzu/octant-plugin-for-kind/workflows/CI/badge.svg?branch=main)
+![CI](https://github.com/vmware-tanzu/octant-plugin-for-kind/workflows/ci/badge.svg?branch=main)
 
 Octant Plugin for kind provides a visual interface for [kind](https://github.com/kubernetes-sigs/kind).
 It provides a quick way to create and delete local development cluster from Octant's UI.
