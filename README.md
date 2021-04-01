@@ -14,8 +14,8 @@ What this plugin can do:
 
 ## Requirements
 - Docker 19.03 or above
-- Octant 0.16.2 or above
-- kind 0.9 or above
+- Octant 0.18.0 or above
+- kind 0.10 or above
 
 ## Known Issues
 - After creating a new cluster, we need to find a way to know when the cluster is ready besides a context change
