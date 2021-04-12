@@ -93,8 +93,18 @@ func BuildKindClusterView(request service.Request) (component.Component, error) 
 	if err != nil {
 		return nil, err
 	}
+	var choices []component.InputChoice
+	for _, fg := range Unique(featureGates) {
+		choices = append(choices, component.InputChoice{
+			Label:   fg.Feature,
+			Value:   fg.Feature,
+			Checked: false,
+		})
+	}
 	featureGatesForm := component.Form{
-		Fields: generateFeatureFlagCheckboxes(Unique(featureGates)),
+		Fields: []component.FormField{
+			component.NewFormFieldCheckBox("", "__featureGate", choices),
+		},
 	}
 
 	stepper := component.Stepper{
@@ -147,19 +157,4 @@ func generateInputChoices(orderedMap *OrderedMap) []component.InputChoice {
 		inputChoices = append(inputChoices, choice)
 	}
 	return inputChoices
-}
-
-func generateFeatureFlagCheckboxes(featureGates []FeatureGate) []component.FormField {
-	var formFields []component.FormField
-	// TODO: Change "formControlName" to "formArrayName" in stepper.component.html
-	for _, fg := range featureGates {
-		checkbox := component.NewFormFieldCheckBox("", fg.Feature, []component.InputChoice{
-			{
-				Label: fg.Feature,
-				Value: fg.Feature,
-			},
-		})
-		formFields = append(formFields, checkbox)
-	}
-	return formFields
 }
