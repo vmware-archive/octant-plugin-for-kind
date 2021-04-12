@@ -16,7 +16,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.7.0 // indirect
 	github.com/stretchr/testify v1.7.0
-	github.com/vmware-tanzu/octant v0.18.0
+	github.com/vmware-tanzu/octant v0.19.0
 	google.golang.org/genproto v0.0.0-20201119123407-9b1e624d6bc4 // indirect
 	k8s.io/client-go v0.19.3
 	sigs.k8s.io/kind v0.10.0

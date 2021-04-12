@@ -14,7 +14,7 @@ What this plugin can do:
 
 ## Requirements
 - Docker 19.03 or above
-- Octant 0.18.0 or above
+- Octant 0.19.0 or above
 - kind 0.10 or above
 
 ## Known Issues

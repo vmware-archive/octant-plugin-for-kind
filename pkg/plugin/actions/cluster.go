@@ -15,7 +15,6 @@ import (
 	"sigs.k8s.io/kind/pkg/cluster/nodes"
 	"sigs.k8s.io/kind/pkg/cluster/nodeutils"
 	"sigs.k8s.io/kind/pkg/fs"
-	"strconv"
 )
 
 const (
@@ -49,7 +48,7 @@ func ActionHandler(request *service.ActionRequest) error {
 			return err
 		}
 
-		var features map[string]interface{}
+		var features map[string][]string
 		featureGatesData, err := request.Payload.Raw("featureGates")
 		if err != nil {
 			return err
@@ -60,7 +59,7 @@ func ActionHandler(request *service.ActionRequest) error {
 
 		formData := ClusterConfig{
 			Details:  details,
-			Features: features,
+			Features: features["__featureGate"],
 		}
 		return createCluster(request, formData, provider)
 	case DeleteKindClusterAction:
@@ -108,17 +107,13 @@ func createCluster(request *service.ActionRequest, clusterConfig ClusterConfig, 
 		return errors.Errorf("Cluster name cannot be empty")
 	}
 
-	// TODO: Fix upstream bug where NewFormFieldNumber default returns a string
-	numCPNodes := int(clusterConfig.Details.ControlPlaneNodes)
-	numWorkers := int(clusterConfig.Details.Workers)
-
-	if numCPNodes >= 0 {
+	if clusterConfig.Details.ControlPlaneNodes >= 0 {
 		var version string
 		if len(clusterConfig.Details.Version) > 0 {
 			version = clusterConfig.Details.Version[0]
 		}
 
-		for i := 0; i < numCPNodes; i++ {
+		for i := 0; i < clusterConfig.Details.ControlPlaneNodes; i++ {
 			node := v1alpha4.Node{
 				Role:  v1alpha4.ControlPlaneRole,
 				Image: version,
@@ -127,12 +122,12 @@ func createCluster(request *service.ActionRequest, clusterConfig ClusterConfig, 
 		}
 	}
 
-	if numWorkers >= 0 {
+	if clusterConfig.Details.Workers >= 0 {
 		var version string
 		if len(clusterConfig.Details.Version) > 0 {
 			version = clusterConfig.Details.Version[0]
 		}
-		for i := 0; i < numWorkers; i++ {
+		for i := 0; i < clusterConfig.Details.Workers; i++ {
 			worker := v1alpha4.Node{
 				Role:  v1alpha4.WorkerRole,
 				Image: version,
@@ -143,10 +138,8 @@ func createCluster(request *service.ActionRequest, clusterConfig ClusterConfig, 
 
 	featureGates := make(map[string]bool)
 
-	for key, value := range clusterConfig.Features {
-		if value != nil {
-			featureGates[key] = value.(bool)
-		}
+	for _, feature := range clusterConfig.Features {
+		featureGates[feature] = true
 	}
 
 	kindCluster := &v1alpha4.Cluster{
@@ -155,7 +148,7 @@ func createCluster(request *service.ActionRequest, clusterConfig ClusterConfig, 
 	}
 
 	alert := action.CreateAlert(action.AlertTypeInfo, "Creating cluster: "+clusterName, action.DefaultAlertExpiration)
-	request.DashboardClient.SendAlert(request.Context(), request.ClientID, alert)
+	request.DashboardClient.SendAlert(request.Context(), request.ClientState.ClientID, alert)
 
 	// TODO: Show status when creating cluster
 	// TODO: Kind switches to new context once ready. Bad UX?
@@ -186,42 +179,22 @@ func deleteCluster(request *service.ActionRequest, provider *cluster.Provider) e
 	}
 
 	alert := action.CreateAlert(action.AlertTypeInfo, "Deleted kind cluster: "+clusterName, action.DefaultAlertExpiration)
-	request.DashboardClient.SendAlert(request.Context(), request.ClientID, alert)
+	request.DashboardClient.SendAlert(request.Context(), request.ClientState.ClientID, alert)
 	return nil
 }
 
 // ClusterConfig contains input from stepper
 type ClusterConfig struct {
-	Details  ClusterDetails         `json:"clusterConfiguration"`
-	Features map[string]interface{} `json:"featureGates"`
+	Details  ClusterDetails `json:"clusterConfiguration"`
+	Features []string       `json:"featureGates"`
 }
 
 // ClusterDetails are used to build v1alpha4Config
 type ClusterDetails struct {
 	ClusterName       string   `json:"clusterName"`
-	ControlPlaneNodes FlexInt  `json:"controlPlaneNodes"`
-	Workers           FlexInt  `json:"workers"`
+	ControlPlaneNodes int      `json:"controlPlaneNodes"`
+	Workers           int      `json:"workers"`
 	Version           []string `json:"version"`
-}
-
-// FlexInt is an integer that can also handle string representations
-type FlexInt int
-
-// UnmarshalJSON unmarshals FlexInt
-func (fi *FlexInt) UnmarshalJSON(b []byte) error {
-	if b[0] != '"' {
-		return json.Unmarshal(b, (*int)(fi))
-	}
-	var s string
-	if err := json.Unmarshal(b, &s); err != nil {
-		return err
-	}
-	i, err := strconv.Atoi(s)
-	if err != nil {
-		return err
-	}
-	*fi = FlexInt(i)
-	return nil
 }
 
 func loadImage(request *service.ActionRequest, provider *cluster.Provider, clusterName, imageName string) error {
@@ -268,7 +241,7 @@ func loadImage(request *service.ActionRequest, provider *cluster.Provider, clust
 	}
 
 	alert := action.CreateAlert(action.AlertTypeInfo, "Loading image: "+imageName, action.DefaultAlertExpiration)
-	request.DashboardClient.SendAlert(request.Context(), request.ClientID, alert)
+	request.DashboardClient.SendAlert(request.Context(), request.ClientState.ClientID, alert)
 	return nil
 }
 
@@ -277,10 +250,10 @@ func deleteImage(request *service.ActionRequest, clusterName string, imageID str
 
 	if err := client.DeleteKindImage(request.Context(), clusterName, imageID); err != nil {
 		alert := action.CreateAlert(action.AlertTypeError, "Failed to delete kind image: "+err.Error(), action.DefaultAlertExpiration)
-		request.DashboardClient.SendAlert(request.Context(), request.ClientID, alert)
+		request.DashboardClient.SendAlert(request.Context(), request.ClientState.ClientID, alert)
 		return err
 	}
 	alert := action.CreateAlert(action.AlertTypeInfo, "Deleted kind image: "+imageID, action.DefaultAlertExpiration)
-	request.DashboardClient.SendAlert(request.Context(), request.ClientID, alert)
+	request.DashboardClient.SendAlert(request.Context(), request.ClientState.ClientID, alert)
 	return nil
 }
