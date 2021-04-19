@@ -57,9 +57,19 @@ func ActionHandler(request *service.ActionRequest) error {
 			return err
 		}
 
+		var networking NetworkingDetails
+		networkingConfigData, err := request.Payload.Raw("networking")
+		if err != nil {
+			return err
+		}
+		if err := json.Unmarshal(networkingConfigData, &networking); err != nil {
+			return err
+		}
+
 		formData := ClusterConfig{
-			Details:  details,
-			Features: features["__featureGate"],
+			Details:    details,
+			Features:   features["__featureGate"],
+			Networking: convertTov1alpha4Networking(networking),
 		}
 		return createCluster(request, formData, provider)
 	case DeleteKindClusterAction:
@@ -87,6 +97,29 @@ func ActionHandler(request *service.ActionRequest) error {
 	default:
 		return fmt.Errorf("unable to find handler for plugin: %s", "kind")
 	}
+}
+
+func convertTov1alpha4Networking(networking NetworkingDetails) *v1alpha4.Networking {
+	var kindNetworking v1alpha4.Networking
+	if networking.IPFamily != "" {
+		kindNetworking.IPFamily = v1alpha4.ClusterIPFamily(networking.IPFamily)
+	}
+	if networking.APIServerAddress != "" {
+		kindNetworking.APIServerAddress = networking.APIServerAddress
+	}
+	if networking.APIServerPort != 0 {
+		kindNetworking.APIServerPort = networking.APIServerPort
+	}
+	if networking.PodSubnet != "" {
+		kindNetworking.PodSubnet = networking.PodSubnet
+	}
+	if networking.ServiceSubnet != "" {
+		kindNetworking.ServiceSubnet = networking.ServiceSubnet
+	}
+	if len(networking.DisableDefaultCNI) == 1 && networking.DisableDefaultCNI[0] == "true" {
+		kindNetworking.DisableDefaultCNI = true
+	}
+	return &kindNetworking
 }
 
 func createCluster(request *service.ActionRequest, clusterConfig ClusterConfig, provider *cluster.Provider) error {
@@ -145,8 +178,8 @@ func createCluster(request *service.ActionRequest, clusterConfig ClusterConfig, 
 	kindCluster := &v1alpha4.Cluster{
 		Nodes:        nodes,
 		FeatureGates: featureGates,
+		Networking:   *clusterConfig.Networking,
 	}
-
 	alert := action.CreateAlert(action.AlertTypeInfo, "Creating cluster: "+clusterName, action.DefaultAlertExpiration)
 	request.DashboardClient.SendAlert(request.Context(), request.ClientState.ClientID, alert)
 
@@ -185,8 +218,9 @@ func deleteCluster(request *service.ActionRequest, provider *cluster.Provider) e
 
 // ClusterConfig contains input from stepper
 type ClusterConfig struct {
-	Details  ClusterDetails `json:"clusterConfiguration"`
-	Features []string       `json:"featureGates"`
+	Details    ClusterDetails       `json:"clusterConfiguration"`
+	Features   []string             `json:"featureGates"`
+	Networking *v1alpha4.Networking `json:"networking"`
 }
 
 // ClusterDetails are used to build v1alpha4Config
@@ -195,6 +229,15 @@ type ClusterDetails struct {
 	ControlPlaneNodes int      `json:"controlPlaneNodes"`
 	Workers           int      `json:"workers"`
 	Version           []string `json:"version"`
+}
+
+type NetworkingDetails struct {
+	IPFamily          string   `json:"ipFamily,omitempty"`
+	APIServerPort     int32    `json:"apiServerPort,omitempty"`
+	APIServerAddress  string   `json:"apiServerAddress,omitempty"`
+	PodSubnet         string   `json:"podSubnet,omitempty"`
+	ServiceSubnet     string   `json:"serviceSubnet,omitempty"`
+	DisableDefaultCNI []string `json:"disableDefaultCNI,omitempty"`
 }
 
 func loadImage(request *service.ActionRequest, provider *cluster.Provider, clusterName, imageName string) error {
