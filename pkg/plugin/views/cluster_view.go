@@ -2,6 +2,7 @@ package views
 
 import (
 	"github.com/vmware-tanzu/octant-plugin-for-kind/pkg/docker"
+	"sigs.k8s.io/kind/pkg/apis/config/v1alpha4"
 	"strconv"
 	"time"
 
@@ -107,6 +108,51 @@ func BuildKindClusterView(request service.Request) (component.Component, error) 
 		},
 	}
 
+	networkingForm := component.Form{
+		Fields: []component.FormField{
+			component.NewFormFieldRadio("IP Family", "ipFamily", []component.InputChoice{
+				{
+					"IPv4",
+					string(v1alpha4.IPv4Family),
+					false,
+				},
+				{
+					"IPv6",
+					string(v1alpha4.IPv6Family),
+					false,
+				},
+			}),
+			component.NewFormFieldText("API Server Address", "apiServerAddress", ""),
+			component.NewFormFieldNumber("API Server Port", "apiServerPort", ""),
+			component.NewFormFieldCheckBox("Disable Default CNI", "disableDefaultCNI", []component.InputChoice{
+				{
+					"Yes",
+					"true",
+					false,
+				},
+				{
+					"No",
+					"false",
+					false,
+				},
+			}),
+			component.NewFormFieldText("Pod Subnet", "podSubnet", ""),
+			component.NewFormFieldText("Service Subnet", "serviceSubnet", ""),
+			component.NewFormFieldRadio("", "", []component.InputChoice{
+				{
+					"iptables",
+					"iptables",
+					false,
+				},
+				{
+					"ipvs",
+					"ipvs",
+					false,
+				},
+			}),
+		},
+	}
+
 	stepper := component.Stepper{
 		Base: component.Base{},
 		Config: component.StepperConfig{
@@ -117,6 +163,12 @@ func BuildKindClusterView(request service.Request) (component.Component, error) 
 					Form:        clusterConfigurationForm,
 					Title:       "Cluster configuration",
 					Description: "Build a cluster config for kind.x-k8s.io/v1alpha4",
+				},
+				{
+					Name:        "networking",
+					Form:        networkingForm,
+					Title:       "Networking",
+					Description: "Customize networking",
 				},
 				{
 					Name:        "featureGates",
