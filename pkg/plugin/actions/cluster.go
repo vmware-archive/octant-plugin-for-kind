@@ -148,7 +148,7 @@ func createCluster(request *service.ActionRequest, clusterConfig ClusterConfig, 
 	}
 
 	alert := action.CreateAlert(action.AlertTypeInfo, "Creating cluster: "+clusterName, action.DefaultAlertExpiration)
-	request.DashboardClient.SendAlert(request.Context(), request.ClientState.ClientID, alert)
+	request.DashboardClient.SendAlert(request.Context(), request.ClientState.ClientID(), alert)
 
 	// TODO: Show status when creating cluster
 	// TODO: Kind switches to new context once ready. Bad UX?
@@ -179,7 +179,7 @@ func deleteCluster(request *service.ActionRequest, provider *cluster.Provider) e
 	}
 
 	alert := action.CreateAlert(action.AlertTypeInfo, "Deleted kind cluster: "+clusterName, action.DefaultAlertExpiration)
-	request.DashboardClient.SendAlert(request.Context(), request.ClientState.ClientID, alert)
+	request.DashboardClient.SendAlert(request.Context(), request.ClientState.ClientID(), alert)
 	return nil
 }
 
@@ -241,7 +241,7 @@ func loadImage(request *service.ActionRequest, provider *cluster.Provider, clust
 	}
 
 	alert := action.CreateAlert(action.AlertTypeInfo, "Loading image: "+imageName, action.DefaultAlertExpiration)
-	request.DashboardClient.SendAlert(request.Context(), request.ClientState.ClientID, alert)
+	request.DashboardClient.SendAlert(request.Context(), request.ClientState.ClientID(), alert)
 	return nil
 }
 
@@ -250,10 +250,10 @@ func deleteImage(request *service.ActionRequest, clusterName string, imageID str
 
 	if err := client.DeleteKindImage(request.Context(), clusterName, imageID); err != nil {
 		alert := action.CreateAlert(action.AlertTypeError, "Failed to delete kind image: "+err.Error(), action.DefaultAlertExpiration)
-		request.DashboardClient.SendAlert(request.Context(), request.ClientState.ClientID, alert)
+		request.DashboardClient.SendAlert(request.Context(), request.ClientState.ClientID(), alert)
 		return err
 	}
 	alert := action.CreateAlert(action.AlertTypeInfo, "Deleted kind image: "+imageID, action.DefaultAlertExpiration)
-	request.DashboardClient.SendAlert(request.Context(), request.ClientState.ClientID, alert)
+	request.DashboardClient.SendAlert(request.Context(), request.ClientState.ClientID(), alert)
 	return nil
 }
