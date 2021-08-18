@@ -14,12 +14,10 @@ require (
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/pkg/errors v0.9.1
-	github.com/sirupsen/logrus v1.7.0 // indirect
 	github.com/stretchr/testify v1.7.0
-	github.com/vmware-tanzu/octant v0.19.0
-	google.golang.org/genproto v0.0.0-20201119123407-9b1e624d6bc4 // indirect
-	k8s.io/client-go v0.19.3
-	sigs.k8s.io/kind v0.10.0
+	github.com/vmware-tanzu/octant v0.23.0
+	k8s.io/client-go v0.21.3
+	sigs.k8s.io/kind v0.11.1
 )
 
 replace golang.org/x/sys => golang.org/x/sys v0.0.0-20190830141801-acfa387b8d69

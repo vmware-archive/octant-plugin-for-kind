@@ -74,7 +74,7 @@ func BuildKindClusterView(request service.Request) (component.Component, error) 
 	}
 
 	clusterNameFormField := component.NewFormFieldText("Cluster Name", "clusterName", "")
-	clusterNameFormField.AddValidator("", "This cannot be empty", map[component.FormValidator]interface{}{
+	clusterNameFormField.AddValidator("This cannot be empty", map[component.FormValidator]interface{}{
 		component.FormValidatorRequired: true,
 	})
 	clusterConfigurationForm := component.Form{
