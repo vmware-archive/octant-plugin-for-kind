@@ -1,3 +1,4 @@
+# VMware has ended active development of this project, this repository will no longer be updated.
 # Octant Plugin for kind
 
 ![CI](https://github.com/vmware-tanzu/octant-plugin-for-kind/workflows/ci/badge.svg?branch=main)
